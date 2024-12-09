@@ -4,8 +4,8 @@ import { drizzle } from "drizzle-orm/mysql2";
 
 export const db = drizzle({
   connection: isProduction
-    ? process.env.MYSQLDATABASE!
-    : process.env.DATABASE_URL!,
+    ? process.env.MYSQL_URL!
+    : process.env.MYSQL_PUBLIC_URL!,
   schema,
   casing: "snake_case",
   mode: "default",

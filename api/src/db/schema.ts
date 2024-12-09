@@ -4,6 +4,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  int,
 } from "drizzle-orm/mysql-core";
 import { createId } from "@paralleldrive/cuid2";
 
@@ -14,6 +15,8 @@ export const usersTable = mysqlTable("users", {
   email: varchar({ length: 255 }).notNull().unique(),
   username: varchar({ length: 50 }).notNull().unique(),
   passwordHash: varchar({ length: 255 }).notNull(),
+  salt: varchar({ length: 255 }).notNull(),
+  iterationCount: int().notNull(),
   pushToken: varchar({ length: 255 }),
   createdAt: timestamp({
     fsp: 3,
