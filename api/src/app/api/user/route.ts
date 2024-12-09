@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { usersTable } from "@/db/schema";
+import { friendRequestsTable, friendsTable, usersTable } from "@/db/schema";
 import { validateSessionToken } from "@/lib/jwt";
 import { AccessToken } from "@/types/access-token";
 import { Value } from "@sinclair/typebox/value";
@@ -14,13 +14,33 @@ export async function GET(request: Request) {
 
     const result = validateSessionToken(accessToken);
 
-    const user = await db.query.usersTable.findFirst({
+    const userPromise = db.query.usersTable.findFirst({
       where: eq(usersTable.id, result.sub),
     });
 
-    const friends = await db.query.usersTable.findMany({
-      where: eq(usersTable.id, result.sub),
-    });
+    const friendsPromise = db
+      .select({
+        username: usersTable.username,
+        userId: usersTable.id,
+      })
+      .from(usersTable)
+      .leftJoin(friendsTable, eq(friendsTable.userId, usersTable.id));
+
+    const friendRequestsPromise = db
+      .select({
+        username: usersTable.username,
+        userId: usersTable.id,
+        status: friendRequestsTable.status,
+      })
+      .from(friendRequestsTable)
+      .leftJoin(usersTable, eq(friendRequestsTable.receiverId, usersTable.id))
+      .where(eq(friendRequestsTable.senderId, result.sub));
+
+    const [user, friends, friendRequests] = await Promise.all([
+      userPromise,
+      friendsPromise,
+      friendRequestsPromise,
+    ]);
 
     if (user !== undefined) {
       return new Response(
@@ -28,9 +48,8 @@ export async function GET(request: Request) {
           email: user.email,
           username: user.username,
           createdAt: user.createdAt,
-          friends: friends.map((friend) => ({
-            username: friend.username,
-          })),
+          friends,
+          friendRequests,
         }),
         {
           status: 200,

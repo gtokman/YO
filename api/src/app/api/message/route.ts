@@ -59,9 +59,7 @@ export async function POST(request: Request) {
     }
 
     const friendPushToken = friend.pushToken;
-    // TODO: handle friendPushToken === null
     if (friendPushToken !== null) {
-      // Send push notification
       await client.send(
         new Notification(friendPushToken, {
           alert: "Yo!",
