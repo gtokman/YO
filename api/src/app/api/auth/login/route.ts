@@ -32,7 +32,7 @@ export async function POST(request: Request) {
         userPassword: password,
       });
       if (!isValidPassword) {
-        return new Response("Invalid email or password.", {
+        return new Response(JSON.stringify({ error: "Invalid password." }), {
           status: 401,
         });
       }
@@ -58,17 +58,21 @@ export async function POST(request: Request) {
         headers: { "Content-Type": "application/json" },
       });
     }
-    return new Response("Invalid email or password.", {
-      status: 401,
-    });
-  } catch (err: unknown) {
-    if (!(err instanceof Error)) {
-      return new Response("Something went wrong.", {
+    return new Response(
+      JSON.stringify({ error: "Invalid email or password." }),
+      {
+        status: 401,
+      }
+    );
+  } catch (error: unknown) {
+    return new Response(
+      JSON.stringify({
+        error:
+          error instanceof Error ? error.message : "An unknown error occurred.",
+      }),
+      {
         status: 500,
-      });
-    }
-    return new Response(err.message, {
-      status: 500,
-    });
+      }
+    );
   }
 }

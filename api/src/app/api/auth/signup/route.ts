@@ -79,17 +79,18 @@ export async function POST(request: Request) {
     });
   } catch (error: unknown) {
     if (error instanceof Error) {
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          error:
+            error instanceof Error
+              ? error.message
+              : "An unknown error occurred.",
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
-    return new Response(
-      JSON.stringify({ error: "An unknown error occurred." }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
   }
 }

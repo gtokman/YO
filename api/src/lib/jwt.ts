@@ -29,22 +29,25 @@ export function generateSessionToken({
 
 export function validateSessionToken(token: string): SessionToken {
   try {
+    console.log(token);
     const publicbase64Key = process.env.PUBLIC_KEY!;
     const publicKey = Buffer.from(publicbase64Key, "base64").toString("utf-8");
-
+    console.log("public key");
     const decoded = jwt.verify(token, publicKey, {
       algorithms: ["RS256"],
     });
+    console.log("decoding");
     const validator = compileValidator(SessionToken);
     const { body, error } = validator(decoded);
     if (error !== undefined) {
-      throw new Error(`Invalid token: ${error.message}`);
+      throw new Error(`Error the ${error.message}`);
     }
     return body!;
   } catch (err: unknown) {
     if (!(err instanceof Error)) {
       throw new Error("Unknown error");
     }
+    console.log(err);
     throw new Error(`Invalid token: ${err.message}`);
   }
 }

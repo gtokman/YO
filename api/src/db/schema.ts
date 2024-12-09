@@ -5,6 +5,8 @@ import {
   timestamp,
   uniqueIndex,
   int,
+  mysqlEnum,
+  boolean,
 } from "drizzle-orm/mysql-core";
 import { createId } from "@paralleldrive/cuid2";
 
@@ -53,6 +55,43 @@ export const friendsTable = mysqlTable(
   })
 );
 
+export const friendRequestsTable = mysqlTable(
+  "friend_requests",
+  {
+    id: varchar({ length: 36 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    senderId: varchar({ length: 36 })
+      .notNull()
+      .references(() => usersTable.id),
+    receiverId: varchar({ length: 36 })
+      .notNull()
+      .references(() => usersTable.id),
+    status: mysqlEnum(["pending", "accepted", "rejected"])
+      .notNull()
+      .default("pending"),
+    createdAt: timestamp({
+      fsp: 3,
+      mode: "date",
+    })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp({
+      fsp: 3,
+      mode: "date",
+    })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => ({
+    uniqueRequest: uniqueIndex("friend_requests_sender_receiver_unique").on(
+      table.senderId,
+      table.receiverId
+    ),
+  })
+);
+
 export const messagesTable = mysqlTable("messages", {
   id: varchar({ length: 36 })
     .primaryKey()
@@ -64,6 +103,7 @@ export const messagesTable = mysqlTable("messages", {
     .notNull()
     .references(() => usersTable.id),
   message: text().notNull(),
+  didRead: boolean().notNull().default(false),
   sentAt: timestamp({
     fsp: 3,
     mode: "date",
