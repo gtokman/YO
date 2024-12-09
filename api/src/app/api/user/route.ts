@@ -1,7 +1,9 @@
 import { db } from "@/db";
 import { friendRequestsTable, friendsTable, usersTable } from "@/db/schema";
 import { validateSessionToken } from "@/lib/jwt";
+import { compileBodyValidator } from "@/lib/validator";
 import { AccessToken } from "@/types/access-token";
+import { Type } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 import { eq } from "drizzle-orm";
 
@@ -75,6 +77,83 @@ export async function GET(request: Request) {
   }
 }
 
-export async function PATCH(request: Request) {}
+export async function PATCH(request: Request) {
+  try {
+    const accessToken = Value.Decode(
+      AccessToken,
+      request.headers.get("Authorization")
+    );
 
-export async function DELETE(request: Request) {}
+    const result = validateSessionToken(accessToken);
+
+    const validateBody = compileBodyValidator(
+      Type.Object({
+        pushToken: Type.String({
+          minLength: 1,
+        }),
+      })
+    );
+
+    const { body, error } = await validateBody(request);
+
+    if (error !== undefined) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    const { pushToken } = body!;
+
+    await db
+      .update(usersTable)
+      .set({
+        pushToken,
+      })
+      .where(eq(usersTable.id, result.sub));
+
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error: unknown) {
+    return new Response(
+      JSON.stringify({
+        error:
+          error instanceof Error ? error.message : "An unknown error occurred.",
+      }),
+      {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const accessToken = Value.Decode(
+      AccessToken,
+      request.headers.get("Authorization")
+    );
+
+    const result = validateSessionToken(accessToken);
+
+    // DElETE user account, friends, revoke all sessions
+
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error: unknown) {
+    return new Response(
+      JSON.stringify({
+        error:
+          error instanceof Error ? error.message : "An unknown error occurred.",
+      }),
+      {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+}
