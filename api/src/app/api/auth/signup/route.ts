@@ -1,36 +1,16 @@
 import { db } from "@/db";
-import { usersTable } from "@/db/schema";
+import { sessionsTable, usersTable } from "@/db/schema";
 import { niceInsults } from "@/lib/constants";
 import { hashPassword } from "@/lib/hash";
+import { generateSessionToken } from "@/lib/jwt";
 import { isRateLimited, storeRateLimit } from "@/lib/redis";
 import { compileBodyValidator } from "@/lib/validator";
-import { Type } from "@sinclair/typebox";
-
-const validateInvitationBody = compileBodyValidator(
-  Type.Object(
-    {
-      email: Type.String({ format: "email" }),
-      password: Type.String({
-        minLength: 8,
-        pattern: "^[a-zA-Z0-9_]+$",
-      }),
-      username: Type.String({
-        minLength: 2,
-        pattern: "^[a-zA-Z0-9_]+$",
-      }),
-      // fu: Type.String({
-      //   minLength: 36,
-      //   pattern:
-      //     "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$",
-      // }),
-    },
-    { additionalProperties: false }
-  )
-);
+import { SignUpBodyModel } from "@/types/sign-up";
 
 export async function POST(request: Request) {
   try {
-    const { body, error } = await validateInvitationBody(request);
+    const validateSignUpBody = compileBodyValidator(SignUpBodyModel);
+    const { body, error } = await validateSignUpBody(request);
     if (error !== undefined) {
       return new Response(JSON.stringify({ error: error.message }), {
         status: 400,
@@ -45,8 +25,6 @@ export async function POST(request: Request) {
       ? clientIP.substring(7)
       : clientIP;
     if (parsedIP !== null) {
-      console.log("Parsed client IP:", parsedIP);
-      console.log("ip address", clientIP);
       const isLimited = await isRateLimited({
         ip: parsedIP,
         limit: 5,
@@ -69,7 +47,6 @@ export async function POST(request: Request) {
     }
     const { email, password, username } = body!;
     const { hash, iterations, salt } = hashPassword(password);
-    // TODO: Store ip in Redis for rate limiting
     // TODO: Verify the fu token (device check)
     const result = await db
       .insert(usersTable)
@@ -82,7 +59,21 @@ export async function POST(request: Request) {
       })
       .$returningId();
 
-    return new Response(JSON.stringify(result[0]), {
+    const sessionId = crypto.randomUUID();
+    const twoWeeks = 60 * 60 * 24 * 14;
+    const accessToken = generateSessionToken({
+      userId: result[0].id,
+      sessionId,
+      exp: new Date(Date.now() + twoWeeks * 1000),
+    });
+
+    await db.insert(sessionsTable).values({
+      userId: result[0].id,
+      expiresAt: new Date(Date.now() + twoWeeks * 1000),
+      sessionToken: sessionId,
+    });
+
+    return new Response(JSON.stringify({ accessToken }), {
       status: 201,
       headers: { "Content-Type": "application/json" },
     });
