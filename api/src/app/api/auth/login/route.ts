@@ -32,9 +32,12 @@ export async function POST(request: Request) {
         userPassword: password,
       });
       if (!isValidPassword) {
-        return new Response(JSON.stringify({ error: "Invalid password." }), {
-          status: 401,
-        });
+        return new Response(
+          JSON.stringify({ error: "Invalid Email or password." }),
+          {
+            status: 401,
+          }
+        );
       }
       const sessionId = crypto.randomUUID();
       const twoWeeks = 60 * 60 * 24 * 14;

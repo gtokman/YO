@@ -18,12 +18,19 @@ export async function GET(request: Request) {
       where: eq(usersTable.id, result.sub),
     });
 
+    const friends = await db.query.usersTable.findMany({
+      where: eq(usersTable.id, result.sub),
+    });
+
     if (user !== undefined) {
       return new Response(
         JSON.stringify({
           email: user.email,
           username: user.username,
           createdAt: user.createdAt,
+          friends: friends.map((friend) => ({
+            username: friend.username,
+          })),
         }),
         {
           status: 200,
@@ -49,6 +56,6 @@ export async function GET(request: Request) {
   }
 }
 
-// export async function PATCH(request: Request) {}
+export async function PATCH(request: Request) {}
 
-// export async function DELETE(request: Request) {}
+export async function DELETE(request: Request) {}

@@ -17,6 +17,7 @@ export const SignUpBodyModel = Type.Composite([
     {
       username: Type.String({
         minLength: 2,
+        maxLength: 16,
         pattern: "^[a-zA-Z0-9_]+$",
       }),
       fu: Type.Optional(
